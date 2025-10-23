@@ -13,79 +13,94 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #ffffff;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(88, 101, 242, 0.1);
-            border: 1px solid rgba(88, 101, 242, 0.1);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #CC5B53;
+            height: 100vh;
+            padding: 0;
+            margin: 0;
             overflow: hidden;
         }
 
+        .container {
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            background: white;
+            border-radius: 0;
+            box-shadow: none;
+            border: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
         .header {
-            background: #5865F2;
+            background: #CC5B53;
             color: #ffffff;
-            padding: 30px;
+            padding: 20px;
             text-align: center;
+            flex-shrink: 0;
         }
 
         .header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 0.9em;
+            opacity: 0.9;
         }
 
         .main-content {
             display: grid;
-            grid-template-columns: 350px 1fr;
+            grid-template-columns: 300px 1fr;
             gap: 0;
-            min-height: 600px;
+            flex: 1;
+            overflow: hidden;
         }
 
         .sidebar {
-            background: #f8f9fa;
-            padding: 30px;
-            border-right: 1px solid rgba(88, 101, 242, 0.1);
+            background: white;
+            padding: 20px;
+            border-right: 1px solid #CC5B53;
             overflow-y: auto;
-            max-height: 600px;
+            height: 100%;
         }
 
         .sidebar h2 {
-            color: #5865F2;
-            margin-bottom: 20px;
-            font-size: 1.5em;
+            color: #CC5B53;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            font-weight: 600;
         }
 
         .file-upload {
-            border: 2px dashed #5865F2;
+            border: 2px dashed #CC5B53;
             border-radius: 8px;
-            padding: 30px;
+            padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
-            background: #ffffff;
-            margin-bottom: 20px;
+            background: white;
+            margin-bottom: 15px;
         }
 
         .file-upload:hover {
-            background: rgba(88, 101, 242, 0.05);
-            border-color: #5865F2;
+            background: rgba(204, 91, 83, 0.05);
+            border-color: #CC5B53;
         }
 
         .file-upload.dragover {
-            background: rgba(88, 101, 242, 0.1);
-            border-color: #5865F2;
+            background: rgba(204, 91, 83, 0.1);
+            border-color: #CC5B53;
         }
 
         .file-upload p {
-            color: #333333;
+            color: #CC5B53;
             font-size: 0.9em;
+            font-weight: 500;
         }
 
         .upload-icon {
@@ -94,26 +109,26 @@
         }
 
         .file-list {
-            margin-top: 20px;
+            margin-top: 15px;
         }
 
         .file-item {
-            background: #ffffff;
+            background: white;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 10px;
             cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
+            transition: all 0.3s;
+            border: 1px solid #CC5B53;
         }
 
         .file-item:hover {
-            background: rgba(88, 101, 242, 0.05);
+            background: rgba(204, 91, 83, 0.05);
         }
 
         .file-item.active {
-            border-color: #5865F2;
-            background: rgba(88, 101, 242, 0.1);
+            border-color: #CC5B53;
+            background: rgba(204, 91, 83, 0.1);
         }
 
         .file-item-header {
@@ -124,118 +139,151 @@
         }
 
         .file-item-name {
-            font-weight: bold;
-            color: #5865F2;
-            font-size: 0.95em;
+            font-weight: 600;
+            color: #CC5B53;
+            font-size: 0.9em;
         }
 
         .file-item-status {
-            font-size: 0.75em;
+            font-size: 0.7em;
             padding: 4px 8px;
             border-radius: 4px;
-            background: rgba(88, 101, 242, 0.1);
-            color: #5865F2;
+            background: #CC5B53;
+            color: white;
+            font-weight: 500;
+        }
+
+        .file-item-status.cleaning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        .file-item-status.ready {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         .file-item-info {
-            font-size: 0.85em;
+            font-size: 0.8em;
             color: #666;
             margin-top: 5px;
         }
 
+        .file-item-info div {
+            margin-bottom: 3px;
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .file-item-info div:last-child {
+            margin-bottom: 0;
+        }
+
         .delete-btn {
-            background: #ff4444;
+            background: #CC5B53;
             color: white;
             border: none;
             padding: 4px 8px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 0.75em;
+            font-size: 0.7em;
             margin-top: 5px;
+            font-weight: 500;
+            transition: all 0.3s;
         }
 
         .delete-btn:hover {
-            background: #cc0000;
+            background: #b84a42;
         }
 
         .chat-section {
-            padding: 30px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
+            background: white;
+            height: 100%;
         }
 
         .chat-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #CC5B53;
         }
 
         .chat-header h2 {
-            color: #5865F2;
-            font-size: 1.5em;
+            color: #CC5B53;
+            font-size: 1.4em;
+            font-weight: 700;
         }
 
         .current-file {
             color: #666;
-            font-size: 0.9em;
+            font-size: 0.8em;
             font-style: italic;
         }
 
         .download-btn {
             padding: 8px 16px;
-            background: #5865F2;
+            background: #CC5B53;
             color: white;
             border: none;
             border-radius: 6px;
-            font-size: 0.9em;
+            font-size: 0.8em;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s;
             display: none;
         }
 
         .download-btn:hover {
-            background: #4752C4;
-            transform: scale(1.05);
+            background: #b84a42;
         }
 
         .download-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
-            background: #f8f9fa;
+            padding: 15px;
+            background: white;
             border-radius: 8px;
-            margin-bottom: 20px;
-            max-height: 500px;
+            margin-bottom: 15px;
+            border: 1px solid #CC5B53;
         }
 
         .chat-messages::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         .chat-messages::-webkit-scrollbar-track {
-            background: rgba(88, 101, 242, 0.05);
-            border-radius: 4px;
+            background: rgba(204, 91, 83, 0.1);
+            border-radius: 3px;
         }
 
         .chat-messages::-webkit-scrollbar-thumb {
-            background: rgba(88, 101, 242, 0.3);
-            border-radius: 4px;
+            background: #CC5B53;
+            border-radius: 3px;
         }
 
         .chat-messages::-webkit-scrollbar-thumb:hover {
-            background: rgba(88, 101, 242, 0.5);
+            background: #b84a42;
         }
 
         .message {
             margin-bottom: 15px;
-            padding: 12px 16px;
+            padding: 15px;
             border-radius: 8px;
             animation: fadeIn 0.3s;
         }
@@ -246,15 +294,15 @@
         }
 
         .message.user {
-            background: rgba(88, 101, 242, 0.1);
+            background: rgba(204, 91, 83, 0.1);
             margin-left: 20%;
-            border-left: 3px solid #5865F2;
+            border-left: 3px solid #CC5B53;
         }
 
         .message.assistant {
-            background: rgba(88, 101, 242, 0.05);
+            background: rgba(204, 91, 83, 0.05);
             margin-right: 20%;
-            border-left: 3px solid #5865F2;
+            border-left: 3px solid #CC5B53;
         }
 
         .message-header {
@@ -264,15 +312,15 @@
         }
 
         .message-header.user {
-            color: #5865F2;
+            color: #CC5B53;
         }
 
         .message-header.assistant {
-            color: #5865F2;
+            color: #CC5B53;
         }
 
         .message-content {
-            color: #333333;
+            color: #333;
             line-height: 1.5;
         }
 
@@ -284,38 +332,39 @@
         .chat-input {
             flex: 1;
             padding: 12px 16px;
-            border: 1px solid rgba(88, 101, 242, 0.2);
+            border: 2px solid #CC5B53;
             border-radius: 8px;
             font-size: 1em;
             outline: none;
-            transition: border-color 0.3s;
-            background: #ffffff;
-            color: #333333;
+            transition: all 0.3s;
+            background: white;
+            color: #333;
         }
 
         .chat-input:focus {
-            border-color: #5865F2;
+            border-color: #CC5B53;
+            box-shadow: 0 0 0 3px rgba(204, 91, 83, 0.1);
         }
 
         .chat-input::placeholder {
-            color: rgba(0, 0, 0, 0.4);
+            color: #999;
         }
 
         .send-btn {
-            padding: 12px 30px;
-            background: #5865F2;
-            color: #ffffff;
+            padding: 12px 24px;
+            background: #CC5B53;
+            color: white;
             border: none;
             border-radius: 8px;
             font-size: 1em;
-            cursor: pointer;
-            transition: all 0.2s;
             font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
         }
 
         .send-btn:hover {
+            background: #b84a42;
             transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
         }
 
         .send-btn:disabled {
@@ -328,8 +377,8 @@
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(88, 101, 242, 0.2);
-            border-top: 3px solid #5865F2;
+            border: 3px solid rgba(204, 91, 83, 0.2);
+            border-top: 3px solid #CC5B53;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -341,63 +390,67 @@
 
         .empty-state {
             text-align: center;
-            color: rgba(0, 0, 0, 0.5);
+            color: #666;
             padding: 40px;
         }
 
         .insight-box {
-            background: rgba(88, 101, 242, 0.15);
-            color: #5865F2;
+            background: rgba(204, 91, 83, 0.1);
+            color: #CC5B53;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 10px;
-            border: 1px solid rgba(88, 101, 242, 0.3);
+            border: 1px solid #CC5B53;
         }
 
         .insight-box h3 {
             margin-bottom: 8px;
             font-size: 1.1em;
+            font-weight: bold;
         }
 
         .insight-box p {
-            font-size: 0.95em;
+            font-size: 0.9em;
             opacity: 0.9;
         }
 
         .settings {
-            margin-top: 20px;
-            background: #ffffff;
-            padding: 20px;
+            margin-top: 15px;
+            background: white;
+            padding: 15px;
             border-radius: 8px;
-            border: 1px solid rgba(88, 101, 242, 0.1);
+            border: 1px solid #CC5B53;
         }
 
         .settings h3 {
-            color: #5865F2;
+            color: #CC5B53;
             margin-bottom: 15px;
             font-size: 1.1em;
+            font-weight: bold;
         }
 
         .settings input,
         .settings select {
             width: 100%;
             padding: 10px;
-            border: 1px solid rgba(88, 101, 242, 0.2);
+            border: 2px solid #CC5B53;
             border-radius: 6px;
             margin-bottom: 15px;
             font-size: 0.9em;
-            background: #ffffff;
-            color: #333333;
+            background: white;
+            color: #333;
+            transition: all 0.3s;
         }
 
         .settings input:focus,
         .settings select:focus {
             outline: none;
-            border-color: #5865F2;
+            border-color: #CC5B53;
+            box-shadow: 0 0 0 3px rgba(204, 91, 83, 0.1);
         }
 
         .settings input::placeholder {
-            color: rgba(0, 0, 0, 0.4);
+            color: #999;
         }
 
         .toggle-switch {
@@ -405,7 +458,8 @@
             align-items: center;
             gap: 10px;
             margin-bottom: 15px;
-            color: rgba(0, 0, 0, 0.7);
+            color: #333;
+            font-weight: 600;
         }
 
         .switch {
@@ -428,7 +482,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(88, 101, 242, 0.2);
+            background-color: rgba(204, 91, 83, 0.3);
             transition: .4s;
             border-radius: 24px;
         }
@@ -440,13 +494,13 @@
             width: 18px;
             left: 3px;
             bottom: 3px;
-            background-color: #ffffff;
+            background-color: white;
             transition: .4s;
             border-radius: 50%;
         }
 
         input:checked + .slider {
-            background-color: #5865F2;
+            background-color: #CC5B53;
         }
 
         input:checked + .slider:before {
@@ -454,14 +508,15 @@
         }
 
         .model-info {
-            font-size: 0.85em;
-            color: rgba(0, 0, 0, 0.5);
+            font-size: 0.8em;
+            color: #666;
             margin-top: 5px;
         }
 
         .model-info a {
-            color: #5865F2;
+            color: #CC5B53;
             text-decoration: none;
+            font-weight: 600;
         }
 
         .model-info a:hover {
@@ -607,21 +662,45 @@
                 reader.onload = (e) => {
                     try {
                         const rawData = JSON.parse(e.target.result);
-                        const cleanedData = cleanDiscordData(rawData);
-                        const fileId = `${file.name}-${Date.now()}`;
                         
+                        // Show loading state
+                        const fileId = `${file.name}-${Date.now()}`;
                         uploadedFiles[fileId] = {
                             name: file.name,
-                            data: cleanedData,
-                            rawData: rawData
+                            data: null, // Will be set after cleaning
+                            rawData: rawData,
+                            status: 'cleaning' // Add status
                         };
-
-                        renderFileList();
                         
-                        // Auto-select first file
-                        if (!currentFileId && Object.keys(uploadedFiles).length === 1) {
-                            selectFile(fileId);
-                        }
+                        renderFileList(); // Show loading state
+                        
+                        // Simulate cleaning process with loading cursor
+                        setTimeout(() => {
+                            const cleanedData = cleanDiscordData(rawData);
+                            
+                            // Calculate date range
+                            const timestamps = cleanedData.map(msg => msg.timestamp);
+                            const minDate = new Date(Math.min(...timestamps));
+                            const maxDate = new Date(Math.max(...timestamps));
+                            const dateRange = `${minDate.toLocaleDateString()} - ${maxDate.toLocaleDateString()}`;
+                            
+                            uploadedFiles[fileId] = {
+                                name: file.name,
+                                data: cleanedData,
+                                rawData: rawData,
+                                status: 'ready',
+                                messageCount: cleanedData.length,
+                                dateRange: dateRange
+                            };
+                            
+                            renderFileList(); // Update with final data
+                            
+                            // Auto-select first file
+                            if (!currentFileId && Object.keys(uploadedFiles).length === 1) {
+                                selectFile(fileId);
+                            }
+                        }, 500); // Small delay to show loading
+                        
                     } catch (error) {
                         alert(`Error parsing ${file.name}: ${error.message}`);
                     }
@@ -649,14 +728,33 @@
             Object.entries(uploadedFiles).forEach(([id, file]) => {
                 const fileItem = document.createElement('div');
                 fileItem.className = `file-item ${id === currentFileId ? 'active' : ''}`;
+                
+                let statusHtml = '';
+                let infoHtml = '';
+                
+                if (file.status === 'cleaning') {
+                    statusHtml = '<span class="file-item-status cleaning">🔄 Cleaning...</span>';
+                    infoHtml = '<div class="file-item-info">Processing data...</div>';
+                } else if (file.status === 'ready') {
+                    statusHtml = '<span class="file-item-status ready">✅ Ready</span>';
+                    infoHtml = `
+                        <div class="file-item-info">
+                            <div>📊 ${file.messageCount} messages</div>
+                            <div>📅 ${file.dateRange}</div>
+                            <div>✨ Data cleaned</div>
+                        </div>
+                    `;
+                }
+                
                 fileItem.innerHTML = `
                     <div class="file-item-header">
                         <span class="file-item-name">${file.name}</span>
-                        <span class="file-item-status">Ready</span>
+                        ${statusHtml}
                     </div>
-                    <div class="file-item-info">${file.data.length} messages</div>
+                    ${infoHtml}
                     <button class="delete-btn" onclick="deleteFile('${id}')">Delete</button>
                 `;
+                
                 fileItem.addEventListener('click', () => selectFile(id));
                 fileList.appendChild(fileItem);
             });
@@ -779,21 +877,15 @@
                                        lowerQuestion.includes('overview') ||
                                        lowerQuestion.includes('summar');
 
-            // Build messages array with conversation history
             const messages = [];
             
-            // Check if this is the first message
-            const isFirstMessage = !conversationHistory[currentFileId] || conversationHistory[currentFileId].length === 0;
-
-            if (isFirstMessage) {
-                // First message - always send the summary data so LLM knows what to analyze
+            if (isAskingForSummary) {
+                // Summary request - use strict 6-section format
                 const summary = generateSummaryForLLM();
                 
-                if (isAskingForSummary) {
-                    // Use the detailed summary prompt
-                    messages.push({
-                        role: 'system',
-                        content: `You are a chat data analyst. You MUST produce a comprehensive report with ALL 6 sections below. Do not skip any section.
+                messages.push({
+                    role: 'system',
+                    content: `You are a chat data analyst. You MUST produce a comprehensive report with ALL 6 sections below. Do not skip any section.
 
 YOUR REPORT MUST INCLUDE THESE 6 SECTIONS:
 
@@ -823,87 +915,32 @@ YOUR REPORT MUST INCLUDE THESE 6 SECTIONS:
    - Format as a table showing: Channel/Topic | # Messages | Key Users | Mood | Notes
 
 CRITICAL: You MUST include all 6 sections. Format the output as a clean, human-readable markdown report.`
-                    });
-                    
-                    messages.push({
-                        role: 'user',
-                        content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nREQUIRED: Provide a comprehensive summary report with ALL 6 sections listed above. Do not skip any section.`
-                    });
-                } else {
-                    // Use the regular conversational prompt
-                    messages.push({
-                        role: 'system',
-                        content: 'You are a helpful assistant that analyzes Discord chat data. Answer questions naturally based on the data provided. Only provide summaries when explicitly asked. Otherwise, respond conversationally to specific questions.'
-                    });
-                    
-                    messages.push({
-                        role: 'user',
-                        content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nPlease answer the question based on this data.`
-                    });
-                }
+                });
+                
+                messages.push({
+                    role: 'user',
+                    content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nREQUIRED: Provide a comprehensive summary report with ALL 6 sections listed above. Do not skip any section.`
+                });
             } else {
-                // Subsequent messages
-                if (isAskingForSummary) {
-                    // For summary requests, include the data again
-                    const summary = generateSummaryForLLM();
-                    
-                    // Use the detailed summary prompt
-                    messages.push({
-                        role: 'system',
-                        content: `You are a chat data analyst. You MUST produce a comprehensive report with ALL 6 sections below. Do not skip any section.
-
-YOUR REPORT MUST INCLUDE THESE 6 SECTIONS:
-
-1. **Overview**
-   - Total messages, total participants
-   - Most active times or dates
-   - Overall sentiment or tone of the chat (positive, neutral, negative)
-
-2. **Top Participants**
-   - List top 5–10 most active users
-   - Mention how many messages each sent and what topics they discussed most
-
-3. **Topics & Themes**
-   - Identify the main discussion topics or channels (e.g., gaming, art, off-topic)
-   - Summarize key subtopics or trends
-   - Mention any recurring jokes, debates, or events
-
-4. **Behavioral Insights**
-   - Describe group dynamics (who leads conversations, who responds most)
-   - Detect emotional spikes, conflicts, or moments of high engagement
-   - Note any moderation or off-topic behavior
-
-5. **Notable Quotes or Highlights**
-   - Include 3–5 short representative quotes or moments that summarize the chat's tone or key events
-
-6. **Summary Table**
-   - Format as a table showing: Channel/Topic | # Messages | Key Users | Mood | Notes
-
-CRITICAL: You MUST include all 6 sections. Format the output as a clean, human-readable markdown report.`
-                    });
-                    
-                    // Include the chat data
-                    messages.push({
-                        role: 'user',
-                        content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nREQUIRED: Provide a comprehensive summary report with ALL 6 sections listed above. Do not skip any section.`
-                    });
-                } else {
-                    // Use the regular conversational prompt
-                    messages.push({
-                        role: 'system',
-                        content: 'You are a helpful assistant that analyzes Discord chat data. Answer questions naturally based on the data provided. Only provide summaries when explicitly asked. Otherwise, respond conversationally to specific questions.'
-                    });
-                    
-                    const recentHistory = conversationHistory[currentFileId].slice(-20);
+                // Regular chat - simple RAG
+                const summary = generateSummaryForLLM();
+                
+                messages.push({
+                    role: 'system',
+                    content: 'You are a helpful assistant that analyzes Discord chat data. Answer questions naturally based on the data provided. Be conversational and helpful.'
+                });
+                
+                // Include conversation history for context
+                if (conversationHistory[currentFileId] && conversationHistory[currentFileId].length > 0) {
+                    const recentHistory = conversationHistory[currentFileId].slice(-10);
                     const validHistory = recentHistory.filter(msg => msg.content && typeof msg.content === 'string' && msg.content.trim() !== '');
                     messages.push(...validHistory);
-                    
-                    // Just send the question
-                    messages.push({
-                        role: 'user',
-                        content: question
-                    });
                 }
+                
+                messages.push({
+                    role: 'user',
+                    content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nPlease answer the question based on this data.`
+                });
             }
 
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -985,7 +1022,7 @@ ${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg
             
             const header = document.createElement('div');
             header.className = `message-header ${type}`;
-            header.textContent = type === 'user' ? 'You' : 'Assistant';
+            header.textContent = type === 'user' ? 'You' : 'Agent 24';
             
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
