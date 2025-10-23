@@ -134,14 +134,21 @@
         .file-item-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 8px;
+            gap: 8px;
         }
 
         .file-item-name {
             font-weight: 600;
             color: #CC5B53;
             font-size: 0.9em;
+            flex: 1;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.3;
+            min-width: 0;
         }
 
         .file-item-status {
@@ -151,6 +158,9 @@
             background: #CC5B53;
             color: white;
             font-weight: 500;
+            flex-shrink: 0;
+            white-space: nowrap;
+            min-width: fit-content;
         }
 
         .file-item-status.cleaning {
@@ -661,15 +671,24 @@
                         // Process data immediately for faster performance
                         const cleanedData = cleanDiscordData(rawData);
                         
-                        // Calculate date range efficiently
+                        // Calculate date range efficiently with optimized algorithm
                         let dateRange = 'No data';
                         if (cleanedData.length > 0) {
-                            const timestamps = cleanedData.map(msg => msg.timestamp);
-                            const minTimestamp = Math.min(...timestamps);
-                            const maxTimestamp = Math.max(...timestamps);
-                            const minDate = new Date(minTimestamp);
-                            const maxDate = new Date(maxTimestamp);
-                            dateRange = `${minDate.toLocaleDateString()} - ${maxDate.toLocaleDateString()}`;
+                            // Use single pass instead of multiple array operations
+                            let minTimestamp = Infinity;
+                            let maxTimestamp = -Infinity;
+                            
+                            for (let i = 0; i < cleanedData.length; i++) {
+                                const timestamp = cleanedData[i].timestamp;
+                                if (timestamp < minTimestamp) minTimestamp = timestamp;
+                                if (timestamp > maxTimestamp) maxTimestamp = timestamp;
+                            }
+                            
+                            if (minTimestamp !== Infinity && maxTimestamp !== -Infinity) {
+                                const minDate = new Date(minTimestamp);
+                                const maxDate = new Date(maxTimestamp);
+                                dateRange = `${minDate.toLocaleDateString()} - ${maxDate.toLocaleDateString()}`;
+                            }
                         }
                         
                         uploadedFiles[fileId] = {
@@ -696,14 +715,23 @@
             });
         }
 
+        // Memoization cache for data processing
+        const dataCache = new Map();
+        
         function cleanDiscordData(data) {
             // Early return for empty or invalid data
             if (!data || !Array.isArray(data) || data.length === 0) {
                 return [];
             }
             
+            // Check cache first
+            const dataKey = JSON.stringify(data.slice(0, 10)); // Use first 10 items as cache key
+            if (dataCache.has(dataKey)) {
+                return dataCache.get(dataKey);
+            }
+            
             // Process data efficiently with optimized mapping
-            return data.map(message => ({
+            const result = data.map(message => ({
                 authorId: message.authorId,
                 timestamp: message.createdTimestamp,
                 content: message.content || '',
@@ -713,10 +741,26 @@
                 type: message.type || 0,
                 attachmentCount: message.attachments?.length || 0
             }));
+            
+            // Cache the result
+            dataCache.set(dataKey, result);
+            return result;
         }
 
+        // Debounced file list rendering for better performance
+        let renderFileListTimeout;
         function renderFileList() {
-            fileList.innerHTML = '';
+            if (renderFileListTimeout) {
+                clearTimeout(renderFileListTimeout);
+            }
+            renderFileListTimeout = setTimeout(() => {
+                renderFileListImmediate();
+            }, 10); // 10ms debounce
+        }
+
+        function renderFileListImmediate() {
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
             
             Object.entries(uploadedFiles).forEach(([id, file]) => {
                 const fileItem = document.createElement('div');
@@ -749,8 +793,12 @@
                 `;
                 
                 fileItem.addEventListener('click', () => selectFile(id));
-                fileList.appendChild(fileItem);
+                fragment.appendChild(fileItem);
             });
+            
+            // Single DOM update instead of multiple
+            fileList.innerHTML = '';
+            fileList.appendChild(fragment);
         }
 
         function selectFile(id) {
@@ -778,6 +826,10 @@
                 delete uploadedFiles[id];
                 delete conversationHistory[id];
                 
+                // Clean up caches for better memory management
+                dataCache.clear();
+                summaryCache.clear();
+                
                 if (currentFileId === id) {
                     currentFileId = null;
                     currentFileDisplay.textContent = 'No file selected';
@@ -793,6 +845,20 @@
                 }
             }
         }
+        
+        // Memory cleanup function
+        function cleanupMemory() {
+            // Clear caches if they get too large to prevent memory leaks
+            if (dataCache.size > 50) {
+                dataCache.clear();
+            }
+            if (summaryCache.size > 20) {
+                summaryCache.clear();
+            }
+        }
+        
+        // Run cleanup every 5 minutes
+        setInterval(cleanupMemory, 300000);
 
         // Chat functionality
         sendBtn.addEventListener('click', () => {
@@ -901,10 +967,19 @@
             if (!conversationHistory[currentFileId]) {
                 conversationHistory[currentFileId] = [];
             }
-            conversationHistory[currentFileId].push(
-                { role: 'user', content: String(question) },
-                { role: 'assistant', content: String(answer) }
-            );
+            
+            // For summary requests, store the full report content
+            if (isAskingForSummary) {
+                conversationHistory[currentFileId].push(
+                    { role: 'user', content: String(question) },
+                    { role: 'assistant', content: String(answer) }
+                );
+            } else {
+                conversationHistory[currentFileId].push(
+                    { role: 'user', content: String(question) },
+                    { role: 'assistant', content: String(answer) }
+                );
+            }
         }
 
         async function callOpenAI(question) {
@@ -951,6 +1026,8 @@ Your communication style:
 - Present information like a professional insight report.
 - Avoid raw JSON or code.
 - Write in Markdown with **bold headings**, short paragraphs, and bullet points when useful.
+- NEVER mention specific user numbers, user IDs, or individual user identifiers in responses or reports.
+- Focus on patterns, trends, and community-level insights rather than individual user data.
 
 Always think like:
 > "If I were the product & community manager, what actions or improvements would I take based on this data?"
@@ -1056,37 +1133,58 @@ Now, based on the user's uploaded Discord chat data, generate the report followi
             return data.choices[0].message.content;
         }
 
+        // Memoized summary generation for better performance
+        const summaryCache = new Map();
+        
         function generateSummaryForLLM() {
             const chatData = uploadedFiles[currentFileId].data;
-            const users = new Set(chatData.map(msg => msg.authorId));
-            const userCounts = {};
-            chatData.forEach(msg => {
-                userCounts[msg.authorId] = (userCounts[msg.authorId] || 0) + 1;
-            });
-            const sortedUsers = Object.entries(userCounts).sort((a, b) => b[1] - a[1]);
+            const cacheKey = `${currentFileId}-${chatData.length}`;
             
+            if (summaryCache.has(cacheKey)) {
+                return summaryCache.get(cacheKey);
+            }
+            
+            // Optimized data processing with single pass
+            const userCounts = {};
             const hourCounts = {};
-            chatData.forEach(msg => {
+            const mentionCounts = {};
+            let replies = 0;
+            let edited = 0;
+            let withAttachments = 0;
+            
+            // Single pass through data for all calculations
+            for (let i = 0; i < chatData.length; i++) {
+                const msg = chatData[i];
+                
+                // User counts
+                userCounts[msg.authorId] = (userCounts[msg.authorId] || 0) + 1;
+                
+                // Hour counts
                 const date = new Date(msg.timestamp);
                 const hour = date.getHours();
                 hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-            });
-            const sortedHours = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]);
+                
+                // Other statistics
+                if (msg.replyTo) replies++;
+                if (msg.editedTimestamp) edited++;
+                if (msg.attachmentCount > 0) withAttachments++;
+                
+                // Mentions processing
+                if (msg.mentions && msg.mentions.length > 0) {
+                    msg.mentions.forEach(mention => {
+                        mentionCounts[mention] = (mentionCounts[mention] || 0) + 1;
+                    });
+                }
+            }
             
-            const mentionCounts = {};
-            chatData.forEach(msg => {
-                msg.mentions.forEach(mentionedId => {
-                    mentionCounts[mentionedId] = (mentionCounts[mentionedId] || 0) + 1;
-                });
-            });
+            const sortedUsers = Object.entries(userCounts).sort((a, b) => b[1] - a[1]);
+            const sortedHours = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]);
             const sortedMentions = Object.entries(mentionCounts).sort((a, b) => b[1] - a[1]);
             
-            const replies = chatData.filter(msg => msg.type === 19).length;
-            const edited = chatData.filter(msg => msg.editedTimestamp !== null).length;
-            const withAttachments = chatData.filter(msg => msg.attachmentCount > 0).length;
-
-            return `Total Messages: ${chatData.length}
-Unique Users: ${users.size}
+            const uniqueUsers = Object.keys(userCounts).length;
+            
+            const result = `Total Messages: ${chatData.length}
+Unique Users: ${uniqueUsers}
 
 Top 5 Most Active Users:
 ${sortedUsers.slice(0, 5).map(([id, count], i) => `${i + 1}. User ${id}: ${count} messages`).join('\n')}
@@ -1104,6 +1202,10 @@ Other Statistics:
 
 Sample Messages (first 10):
 ${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`).join('\n')}`;
+            
+            // Cache the result
+            summaryCache.set(cacheKey, result);
+            return result;
         }
 
         function addMessage(type, content, isLoading = false) {
@@ -1120,21 +1222,35 @@ ${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg
             if (isLoading) {
                 contentDiv.innerHTML = '<div class="loading"></div>';
             } else {
-                // Use innerHTML for better performance with long content
-                // and to preserve markdown formatting
-                contentDiv.innerHTML = content.replace(/\n/g, '<br>');
+                // Optimized content processing
+                if (content.length > 1000) {
+                    // For long content, use textContent for better performance
+                    contentDiv.textContent = content;
+                } else {
+                    // For short content, use innerHTML for formatting
+                    contentDiv.innerHTML = content.replace(/\n/g, '<br>');
+                }
             }
             
             messageDiv.appendChild(header);
             messageDiv.appendChild(contentDiv);
             chatMessages.appendChild(messageDiv);
             
-            // Optimized scroll handling with immediate execution
-            requestAnimationFrame(() => {
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                chatInput.disabled = false;
-                sendBtn.disabled = false;
-            });
+            // Optimized scrolling - only scroll if near bottom
+            const isNearBottom = chatMessages.scrollTop + chatMessages.clientHeight >= chatMessages.scrollHeight - 100;
+            if (isNearBottom) {
+                requestAnimationFrame(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                });
+            }
+            
+            // Enable controls only if not loading
+            if (!isLoading) {
+                requestAnimationFrame(() => {
+                    chatInput.disabled = false;
+                    sendBtn.disabled = false;
+                });
+            }
         }
 
         function analyzeChat(question) {
@@ -1229,9 +1345,30 @@ ${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg
             
             // Look for the last assistant message that contains a report
             for (let i = history.length - 1; i >= 0; i--) {
-                if (history[i].role === 'assistant' && history[i].content.includes('**Discord Chat Analysis Report**')) {
+                if (history[i].role === 'assistant' && 
+                    (history[i].content.includes('**Gaming Community Analytics Report**') || 
+                     history[i].content.includes('**Discord Chat Analysis Report**') ||
+                     history[i].content.includes('**Overview**') ||
+                     history[i].content.includes('**Community Overview**') ||
+                     history[i].content.includes('**1. Overview**') ||
+                     history[i].content.includes('**1. Community Overview**') ||
+                     history[i].content.includes('**2. Player Activity**') ||
+                     history[i].content.includes('**2. Community Activity**'))) {
                     reportContent = history[i].content;
                     break;
+                }
+            }
+
+            // If still no report found, try to get the last assistant message that's not a download button
+            if (!reportContent) {
+                for (let i = history.length - 1; i >= 0; i--) {
+                    if (history[i].role === 'assistant' && 
+                        !history[i].content.includes('Report Generated Successfully') &&
+                        !history[i].content.includes('Download PDF Report') &&
+                        history[i].content.length > 100) {
+                        reportContent = history[i].content;
+                        break;
+                    }
                 }
             }
 
@@ -1240,42 +1377,92 @@ ${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg
                 return;
             }
 
-            // Create PDF
+            // Create PDF with clean formatting
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Set font
-            doc.setFont('helvetica');
+            // Get file info
+            const file = uploadedFiles[currentFileId];
+            const dateRange = file.dateRange || 'Unknown';
+            const messageCount = file.messageCount || 'Unknown';
             
-            // Add title
-            doc.setFontSize(18);
-            doc.setTextColor(88, 101, 242);
-            doc.text('Discord Chat Analysis Report', 14, 20);
+            // Clean and format content (remove markdown)
+            const cleanContent = reportContent
+                .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold markdown
+                .replace(/\*(.*?)\*/g, '$1')     // Remove italic markdown
+                .replace(/^#+\s*/gm, '')         // Remove header markdown
+                .replace(/^- /gm, '• ')          // Convert dashes to bullets
+                .replace(/^\d+\.\s*/gm, '')      // Remove numbered lists
+                .trim();
             
-            // Add file info
-            doc.setFontSize(12);
+            // Add header section
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.setTextColor(204, 91, 83); // #CC5B53
+            doc.text('Gaming Community Analytics Report', 20, 25);
+            
+            // Add metadata section
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(11);
             doc.setTextColor(100, 100, 100);
-            doc.text(`File: ${uploadedFiles[currentFileId].name}`, 14, 30);
-            doc.text(`Date: ${new Date().toLocaleString()}`, 14, 36);
+            doc.text(`Server: ${file.name.replace('.json', '')}`, 20, 35);
+            doc.text(`Timeframe: ${dateRange}`, 20, 42);
+            doc.text(`Messages Analyzed: ${messageCount}`, 20, 49);
+            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 56);
             
-            // Split content into lines and add to PDF
+            // Add separator line
+            doc.setDrawColor(204, 91, 83);
+            doc.setLineWidth(1);
+            doc.line(20, 62, 190, 62);
+            
+            // Process content with clean formatting
             doc.setFontSize(10);
             doc.setTextColor(0, 0, 0);
             
-            const lines = doc.splitTextToSize(reportContent, 180);
-            let y = 45;
+            const lines = cleanContent.split('\n');
+            let y = 75;
             
-            for (let i = 0; i < lines.length; i++) {
-                if (y > 280) {
-                    doc.addPage();
-                    y = 20;
+            for (let line of lines) {
+                if (line.trim() === '') {
+                    y += 4; // Add spacing for empty lines
+                    continue;
                 }
-                doc.text(lines[i], 14, y);
-                y += 6;
+                
+                // Check for section headers (lines that are all caps or start with numbers)
+                if (line.match(/^[A-Z\s]+$/) || line.match(/^\d+\./)) {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(11);
+                    doc.setTextColor(204, 91, 83);
+                    doc.text(line, 20, y);
+                    y += 8;
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                    doc.setTextColor(0, 0, 0);
+                } else {
+                    // Regular content
+                    if (y > 280) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    
+                    const wrappedLines = doc.splitTextToSize(line, 170);
+                    for (let wrappedLine of wrappedLines) {
+                        if (y > 280) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                        doc.text(wrappedLine, 20, y);
+                        y += 5;
+                    }
+                }
             }
             
             // Save PDF
-            const fileName = `${uploadedFiles[currentFileId].name.replace('.json', '')}_Report.pdf`;
+            const fileName = `${file.name.replace('.json', '')}_Community_Report.pdf`;
             doc.save(fileName);
         }
     </script>
