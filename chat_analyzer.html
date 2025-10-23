@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Chat Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(88, 101, 242, 0.1);
+            border: 1px solid rgba(88, 101, 242, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #5865F2;
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 1px solid rgba(88, 101, 242, 0.1);
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .sidebar h2 {
+            color: #5865F2;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .file-upload {
+            border: 2px dashed #5865F2;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .file-upload:hover {
+            background: rgba(88, 101, 242, 0.05);
+            border-color: #5865F2;
+        }
+
+        .file-upload.dragover {
+            background: rgba(88, 101, 242, 0.1);
+            border-color: #5865F2;
+        }
+
+        .file-upload p {
+            color: #333333;
+            font-size: 0.9em;
+        }
+
+        .upload-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .file-list {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .file-item:hover {
+            background: rgba(88, 101, 242, 0.05);
+        }
+
+        .file-item.active {
+            border-color: #5865F2;
+            background: rgba(88, 101, 242, 0.1);
+        }
+
+        .file-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .file-item-name {
+            font-weight: bold;
+            color: #5865F2;
+            font-size: 0.95em;
+        }
+
+        .file-item-status {
+            font-size: 0.75em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(88, 101, 242, 0.1);
+            color: #5865F2;
+        }
+
+        .file-item-info {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .delete-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75em;
+            margin-top: 5px;
+        }
+
+        .delete-btn:hover {
+            background: #cc0000;
+        }
+
+        .chat-section {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chat-header h2 {
+            color: #5865F2;
+            font-size: 1.5em;
+        }
+
+        .current-file {
+            color: #666;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+
+        .download-btn {
+            padding: 8px 16px;
+            background: #5865F2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: none;
+        }
+
+        .download-btn:hover {
+            background: #4752C4;
+            transform: scale(1.05);
+        }
+
+        .download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            max-height: 500px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(88, 101, 242, 0.05);
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(88, 101, 242, 0.3);
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(88, 101, 242, 0.5);
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            background: rgba(88, 101, 242, 0.1);
+            margin-left: 20%;
+            border-left: 3px solid #5865F2;
+        }
+
+        .message.assistant {
+            background: rgba(88, 101, 242, 0.05);
+            margin-right: 20%;
+            border-left: 3px solid #5865F2;
+        }
+
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .message-header.user {
+            color: #5865F2;
+        }
+
+        .message-header.assistant {
+            color: #5865F2;
+        }
+
+        .message-content {
+            color: #333333;
+            line-height: 1.5;
+        }
+
+        .chat-input-section {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid rgba(88, 101, 242, 0.2);
+            border-radius: 8px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+            background: #ffffff;
+            color: #333333;
+        }
+
+        .chat-input:focus {
+            border-color: #5865F2;
+        }
+
+        .chat-input::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        .send-btn {
+            padding: 12px 30px;
+            background: #5865F2;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(88, 101, 242, 0.2);
+            border-top: 3px solid #5865F2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            color: rgba(0, 0, 0, 0.5);
+            padding: 40px;
+        }
+
+        .insight-box {
+            background: rgba(88, 101, 242, 0.15);
+            color: #5865F2;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(88, 101, 242, 0.3);
+        }
+
+        .insight-box h3 {
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .insight-box p {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .settings {
+            margin-top: 20px;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(88, 101, 242, 0.1);
+        }
+
+        .settings h3 {
+            color: #5865F2;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .settings input,
+        .settings select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(88, 101, 242, 0.2);
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            background: #ffffff;
+            color: #333333;
+        }
+
+        .settings input:focus,
+        .settings select:focus {
+            outline: none;
+            border-color: #5865F2;
+        }
+
+        .settings input::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(88, 101, 242, 0.2);
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #ffffff;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #5865F2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .model-info {
+            font-size: 0.85em;
+            color: rgba(0, 0, 0, 0.5);
+            margin-top: 5px;
+        }
+
+        .model-info a {
+            color: #5865F2;
+            text-decoration: none;
+        }
+
+        .model-info a:hover {
+            text-decoration: underline;
+        }
+
+        .file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 Discord Chat Analyzer</h1>
+            <p>Upload & Analyze Discord Chat Files</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <h2>📁 Files</h2>
+                <div class="file-upload" id="fileUpload">
+                    <div class="upload-icon">📤</div>
+                    <p>Click or drag JSON files here</p>
+                    <input type="file" id="fileInput" class="file-input" accept=".json" multiple>
+                </div>
+
+                <div class="file-list" id="fileList"></div>
+
+                <div class="settings">
+                    <h3>⚙️ LLM Settings</h3>
+                    
+                    <div class="toggle-switch">
+                        <label class="switch">
+                            <input type="checkbox" id="useLLM">
+                            <span class="slider"></span>
+                        </label>
+                        <span>Use AI Analysis</span>
+                    </div>
+
+                    <div id="llmSettings" style="display: none;">
+                        <label for="apiKey">OpenAI API Key:</label>
+                        <input type="password" id="apiKey" placeholder="sk-...">
+                        
+                        <label for="modelSelect">Model:</label>
+                        <select id="modelSelect">
+                            <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap)</option>
+                            <option value="gpt-4o" selected>GPT-4o (Best Quality)</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Fastest)</option>
+                        </select>
+                        <div class="model-info">
+                            💡 Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-section">
+                <div class="chat-header">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <h2>💬 Chat</h2>
+                        <button class="download-btn" id="downloadBtn">📥 Download PDF</button>
+                    </div>
+                    <div class="current-file" id="currentFile">No file selected</div>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="empty-state">
+                        <p>👋 Upload a JSON file to start analyzing!</p>
+                        <p style="margin-top: 10px; font-size: 0.9em;">• Upload Discord chat JSON files</p>
+                        <p style="font-size: 0.9em;">• Files are automatically cleaned</p>
+                        <p style="font-size: 0.9em;">• Select a file to start chatting</p>
+                    </div>
+                </div>
+
+                <div class="chat-input-section">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Ask a question about the chat data..." disabled>
+                    <button class="send-btn" id="sendBtn" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedFiles = {}; // Store all uploaded files
+        let currentFileId = null; // Currently selected file
+        let conversationHistory = {}; // Store conversation history per file
+
+        const fileUpload = document.getElementById('fileUpload');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatMessages = document.getElementById('chatMessages');
+        const currentFileDisplay = document.getElementById('currentFile');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const useLLM = document.getElementById('useLLM');
+        const llmSettings = document.getElementById('llmSettings');
+        const apiKeyInput = document.getElementById('apiKey');
+        const modelSelect = document.getElementById('modelSelect');
+
+        // Toggle LLM settings visibility
+        useLLM.addEventListener('change', () => {
+            llmSettings.style.display = useLLM.checked ? 'block' : 'none';
+        });
+
+        // Download PDF button
+        downloadBtn.addEventListener('click', downloadPDF);
+
+        fileUpload.addEventListener('click', () => fileInput.click());
+
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('dragover');
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('dragover');
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(Array.from(files));
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFiles(Array.from(e.target.files));
+            }
+        });
+
+        function handleFiles(files) {
+            files.forEach(file => {
+                if (!file.name.endsWith('.json')) {
+                    alert(`File ${file.name} is not a JSON file`);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const rawData = JSON.parse(e.target.result);
+                        const cleanedData = cleanDiscordData(rawData);
+                        const fileId = `${file.name}-${Date.now()}`;
+                        
+                        uploadedFiles[fileId] = {
+                            name: file.name,
+                            data: cleanedData,
+                            rawData: rawData
+                        };
+
+                        renderFileList();
+                        
+                        // Auto-select first file
+                        if (!currentFileId && Object.keys(uploadedFiles).length === 1) {
+                            selectFile(fileId);
+                        }
+                    } catch (error) {
+                        alert(`Error parsing ${file.name}: ${error.message}`);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function cleanDiscordData(data) {
+            return data.map(message => ({
+                authorId: message.authorId,
+                timestamp: message.createdTimestamp,
+                content: message.content,
+                mentions: message.mentions?.users || [],
+                replyTo: message.reference?.messageId || null,
+                editedTimestamp: message.editedTimestamp || null,
+                type: message.type,
+                attachmentCount: message.attachments?.length || 0
+            }));
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            
+            Object.entries(uploadedFiles).forEach(([id, file]) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = `file-item ${id === currentFileId ? 'active' : ''}`;
+                fileItem.innerHTML = `
+                    <div class="file-item-header">
+                        <span class="file-item-name">${file.name}</span>
+                        <span class="file-item-status">Ready</span>
+                    </div>
+                    <div class="file-item-info">${file.data.length} messages</div>
+                    <button class="delete-btn" onclick="deleteFile('${id}')">Delete</button>
+                `;
+                fileItem.addEventListener('click', () => selectFile(id));
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        function selectFile(id) {
+            currentFileId = id;
+            renderFileList();
+            
+            if (uploadedFiles[id]) {
+                currentFileDisplay.textContent = `Analyzing: ${uploadedFiles[id].name}`;
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+                
+                // Clear chat and start fresh
+                chatMessages.innerHTML = '';
+                
+                // Initialize conversation history if not exists
+                if (!conversationHistory[id]) {
+                    conversationHistory[id] = [];
+                }
+            }
+        }
+
+        function deleteFile(id) {
+            event.stopPropagation();
+            if (confirm(`Delete ${uploadedFiles[id].name}?`)) {
+                delete uploadedFiles[id];
+                delete conversationHistory[id];
+                
+                if (currentFileId === id) {
+                    currentFileId = null;
+                    currentFileDisplay.textContent = 'No file selected';
+                    chatInput.disabled = true;
+                    sendBtn.disabled = true;
+                    chatMessages.innerHTML = '<div class="empty-state"><p>👋 Select a file to start chatting</p></div>';
+                }
+                renderFileList();
+                
+                // Auto-select another file if available
+                if (currentFileId === null && Object.keys(uploadedFiles).length > 0) {
+                    selectFile(Object.keys(uploadedFiles)[0]);
+                }
+            }
+        }
+
+        // Chat functionality
+        sendBtn.addEventListener('click', () => {
+            const question = chatInput.value.trim();
+            if (question && currentFileId) {
+                handleQuestion(question);
+                chatInput.value = '';
+            }
+        });
+
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendBtn.click();
+            }
+        });
+
+        async function handleQuestion(question) {
+            addMessage('user', question);
+            
+            // Start timer
+            const startTime = Date.now();
+            const loadingMessage = addMessage('assistant', 'Processing...', true);
+            
+            let answer;
+            
+            if (useLLM.checked && apiKeyInput.value.trim()) {
+                try {
+                    answer = await callOpenAI(question);
+                } catch (error) {
+                    answer = 'Error calling OpenAI API: ' + error.message + '\n\nFalling back to basic analysis...\n\n' + analyzeChat(question);
+                }
+            } else {
+                answer = analyzeChat(question);
+            }
+
+            // Calculate elapsed time
+            const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+
+            chatMessages.removeChild(chatMessages.lastChild);
+            addMessage('assistant', `${answer}\n\n⏱️ Response time: ${elapsedTime}s`);
+            
+            // Show download button if this is a summary response
+            const lowerQuestion = question.toLowerCase();
+            const isAskingForSummary = lowerQuestion.includes('summary') || 
+                                       lowerQuestion.includes('summarize') || 
+                                       lowerQuestion.includes('overview') ||
+                                       lowerQuestion.includes('summar');
+            
+            if (isAskingForSummary) {
+                downloadBtn.style.display = 'inline-block';
+            }
+            
+            // Store in conversation history (ensure answer is a string)
+            if (!conversationHistory[currentFileId]) {
+                conversationHistory[currentFileId] = [];
+            }
+            conversationHistory[currentFileId].push(
+                { role: 'user', content: String(question) },
+                { role: 'assistant', content: String(answer) }
+            );
+        }
+
+        async function callOpenAI(question) {
+            const apiKey = apiKeyInput.value.trim();
+            const model = modelSelect.value;
+
+            if (!apiKey) {
+                throw new Error('API key is required');
+            }
+
+            // Check if user is asking for a summary
+            const lowerQuestion = question.toLowerCase();
+            const isAskingForSummary = lowerQuestion.includes('summary') || 
+                                       lowerQuestion.includes('summarize') || 
+                                       lowerQuestion.includes('overview') ||
+                                       lowerQuestion.includes('summar');
+
+            // Build messages array with conversation history
+            const messages = [];
+            
+            // Check if this is the first message
+            const isFirstMessage = !conversationHistory[currentFileId] || conversationHistory[currentFileId].length === 0;
+
+            if (isFirstMessage) {
+                // First message - always send the summary data so LLM knows what to analyze
+                const summary = generateSummaryForLLM();
+                
+                if (isAskingForSummary) {
+                    // Use the detailed summary prompt
+                    messages.push({
+                        role: 'system',
+                        content: `You are a chat data analyst. You MUST produce a comprehensive report with ALL 6 sections below. Do not skip any section.
+
+YOUR REPORT MUST INCLUDE THESE 6 SECTIONS:
+
+1. **Overview**
+   - Total messages, total participants
+   - Most active times or dates
+   - Overall sentiment or tone of the chat (positive, neutral, negative)
+
+2. **Top Participants**
+   - List top 5–10 most active users
+   - Mention how many messages each sent and what topics they discussed most
+
+3. **Topics & Themes**
+   - Identify the main discussion topics or channels (e.g., gaming, art, off-topic)
+   - Summarize key subtopics or trends
+   - Mention any recurring jokes, debates, or events
+
+4. **Behavioral Insights**
+   - Describe group dynamics (who leads conversations, who responds most)
+   - Detect emotional spikes, conflicts, or moments of high engagement
+   - Note any moderation or off-topic behavior
+
+5. **Notable Quotes or Highlights**
+   - Include 3–5 short representative quotes or moments that summarize the chat's tone or key events
+
+6. **Summary Table**
+   - Format as a table showing: Channel/Topic | # Messages | Key Users | Mood | Notes
+
+CRITICAL: You MUST include all 6 sections. Format the output as a clean, human-readable markdown report.`
+                    });
+                    
+                    messages.push({
+                        role: 'user',
+                        content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nREQUIRED: Provide a comprehensive summary report with ALL 6 sections listed above. Do not skip any section.`
+                    });
+                } else {
+                    // Use the regular conversational prompt
+                    messages.push({
+                        role: 'system',
+                        content: 'You are a helpful assistant that analyzes Discord chat data. Answer questions naturally based on the data provided. Only provide summaries when explicitly asked. Otherwise, respond conversationally to specific questions.'
+                    });
+                    
+                    messages.push({
+                        role: 'user',
+                        content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nPlease answer the question based on this data.`
+                    });
+                }
+            } else {
+                // Subsequent messages
+                if (isAskingForSummary) {
+                    // For summary requests, include the data again
+                    const summary = generateSummaryForLLM();
+                    
+                    // Use the detailed summary prompt
+                    messages.push({
+                        role: 'system',
+                        content: `You are a chat data analyst. You MUST produce a comprehensive report with ALL 6 sections below. Do not skip any section.
+
+YOUR REPORT MUST INCLUDE THESE 6 SECTIONS:
+
+1. **Overview**
+   - Total messages, total participants
+   - Most active times or dates
+   - Overall sentiment or tone of the chat (positive, neutral, negative)
+
+2. **Top Participants**
+   - List top 5–10 most active users
+   - Mention how many messages each sent and what topics they discussed most
+
+3. **Topics & Themes**
+   - Identify the main discussion topics or channels (e.g., gaming, art, off-topic)
+   - Summarize key subtopics or trends
+   - Mention any recurring jokes, debates, or events
+
+4. **Behavioral Insights**
+   - Describe group dynamics (who leads conversations, who responds most)
+   - Detect emotional spikes, conflicts, or moments of high engagement
+   - Note any moderation or off-topic behavior
+
+5. **Notable Quotes or Highlights**
+   - Include 3–5 short representative quotes or moments that summarize the chat's tone or key events
+
+6. **Summary Table**
+   - Format as a table showing: Channel/Topic | # Messages | Key Users | Mood | Notes
+
+CRITICAL: You MUST include all 6 sections. Format the output as a clean, human-readable markdown report.`
+                    });
+                    
+                    // Include the chat data
+                    messages.push({
+                        role: 'user',
+                        content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nREQUIRED: Provide a comprehensive summary report with ALL 6 sections listed above. Do not skip any section.`
+                    });
+                } else {
+                    // Use the regular conversational prompt
+                    messages.push({
+                        role: 'system',
+                        content: 'You are a helpful assistant that analyzes Discord chat data. Answer questions naturally based on the data provided. Only provide summaries when explicitly asked. Otherwise, respond conversationally to specific questions.'
+                    });
+                    
+                    const recentHistory = conversationHistory[currentFileId].slice(-20);
+                    const validHistory = recentHistory.filter(msg => msg.content && typeof msg.content === 'string' && msg.content.trim() !== '');
+                    messages.push(...validHistory);
+                    
+                    // Just send the question
+                    messages.push({
+                        role: 'user',
+                        content: question
+                    });
+                }
+            }
+
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 2000
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'API request failed');
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
+        function generateSummaryForLLM() {
+            const chatData = uploadedFiles[currentFileId].data;
+            const users = new Set(chatData.map(msg => msg.authorId));
+            const userCounts = {};
+            chatData.forEach(msg => {
+                userCounts[msg.authorId] = (userCounts[msg.authorId] || 0) + 1;
+            });
+            const sortedUsers = Object.entries(userCounts).sort((a, b) => b[1] - a[1]);
+            
+            const hourCounts = {};
+            chatData.forEach(msg => {
+                const date = new Date(msg.timestamp);
+                const hour = date.getHours();
+                hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+            });
+            const sortedHours = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]);
+            
+            const mentionCounts = {};
+            chatData.forEach(msg => {
+                msg.mentions.forEach(mentionedId => {
+                    mentionCounts[mentionedId] = (mentionCounts[mentionedId] || 0) + 1;
+                });
+            });
+            const sortedMentions = Object.entries(mentionCounts).sort((a, b) => b[1] - a[1]);
+            
+            const replies = chatData.filter(msg => msg.type === 19).length;
+            const edited = chatData.filter(msg => msg.editedTimestamp !== null).length;
+            const withAttachments = chatData.filter(msg => msg.attachmentCount > 0).length;
+
+            return `Total Messages: ${chatData.length}
+Unique Users: ${users.size}
+
+Top 5 Most Active Users:
+${sortedUsers.slice(0, 5).map(([id, count], i) => `${i + 1}. User ${id}: ${count} messages`).join('\n')}
+
+Peak Activity Hours (UTC):
+${sortedHours.slice(0, 3).map(([hour, count]) => `${hour}:00 UTC - ${count} messages`).join('\n')}
+
+Most Mentioned Users:
+${sortedMentions.slice(0, 3).map(([id, count]) => `User ${id}: mentioned ${count} times`).join('\n')}
+
+Other Statistics:
+- Reply Messages: ${replies} (${((replies / chatData.length) * 100).toFixed(2)}%)
+- Edited Messages: ${edited} (${((edited / chatData.length) * 100).toFixed(2)}%)
+- Messages with Attachments: ${withAttachments} (${((withAttachments / chatData.length) * 100).toFixed(2)}%)
+
+Sample Messages (first 10):
+${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`).join('\n')}`;
+        }
+
+        function addMessage(type, content, isLoading = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const header = document.createElement('div');
+            header.className = `message-header ${type}`;
+            header.textContent = type === 'user' ? 'You' : 'Assistant';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (isLoading) {
+                contentDiv.innerHTML = '<div class="loading"></div>';
+            } else {
+                contentDiv.textContent = content;
+            }
+            
+            messageDiv.appendChild(header);
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function analyzeChat(question) {
+            const chatData = uploadedFiles[currentFileId].data;
+            const lowerQuestion = question.toLowerCase();
+            
+            // Most active users
+            if (lowerQuestion.includes('most active') || lowerQuestion.includes('who sent most')) {
+                const userCounts = {};
+                chatData.forEach(msg => {
+                    userCounts[msg.authorId] = (userCounts[msg.authorId] || 0) + 1;
+                });
+                const sorted = Object.entries(userCounts).sort((a, b) => b[1] - a[1]);
+                const top5 = sorted.slice(0, 5);
+                return `Top 5 Most Active Users:\n${top5.map(([id, count], i) => `${i + 1}. User ${id}: ${count} messages`).join('\n')}`;
+            }
+
+            // Activity patterns
+            if (lowerQuestion.includes('activity') || lowerQuestion.includes('pattern')) {
+                const hourCounts = {};
+                chatData.forEach(msg => {
+                    const date = new Date(msg.timestamp);
+                    const hour = date.getHours();
+                    hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+                });
+                const sorted = Object.entries(hourCounts).sort((a, b) => b[1] - a[1]);
+                const top3 = sorted.slice(0, 3);
+                return `Peak Activity Hours (UTC):\n${top3.map(([hour, count]) => `${hour}:00 UTC - ${count} messages`).join('\n')}`;
+            }
+
+            // Mentions
+            if (lowerQuestion.includes('mention')) {
+                const mentionCounts = {};
+                chatData.forEach(msg => {
+                    msg.mentions.forEach(mentionedId => {
+                        mentionCounts[mentionedId] = (mentionCounts[mentionedId] || 0) + 1;
+                    });
+                });
+                const sorted = Object.entries(mentionCounts).sort((a, b) => b[1] - a[1]);
+                const top3 = sorted.slice(0, 3);
+                if (top3.length === 0) return 'No mentions found in the data.';
+                return `Most Mentioned Users:\n${top3.map(([id, count]) => `User ${id}: mentioned ${count} times`).join('\n')}`;
+            }
+
+            // Messages with attachments
+            if (lowerQuestion.includes('attachment') || lowerQuestion.includes('media')) {
+                const withAttachments = chatData.filter(msg => msg.attachmentCount > 0).length;
+                return `Total messages with attachments: ${withAttachments} (${((withAttachments / chatData.length) * 100).toFixed(2)}%)`;
+            }
+
+            // Reply analysis
+            if (lowerQuestion.includes('reply') || lowerQuestion.includes('thread')) {
+                const replies = chatData.filter(msg => msg.type === 19).length;
+                const regular = chatData.filter(msg => msg.type === 0).length;
+                return `Total replies: ${replies}\nRegular messages: ${regular}\nReply rate: ${((replies / chatData.length) * 100).toFixed(2)}%`;
+            }
+
+            // Edits
+            if (lowerQuestion.includes('edit')) {
+                const edited = chatData.filter(msg => msg.editedTimestamp !== null).length;
+                return `Total edited messages: ${edited} (${((edited / chatData.length) * 100).toFixed(2)}%)`;
+            }
+
+            // General summary
+            if (lowerQuestion.includes('summary') || lowerQuestion.includes('overview')) {
+                const users = new Set(chatData.map(msg => msg.authorId));
+                const replies = chatData.filter(msg => msg.type === 19).length;
+                const edited = chatData.filter(msg => msg.editedTimestamp !== null).length;
+                const withAttachments = chatData.filter(msg => msg.attachmentCount > 0).length;
+                
+                return `Chat Summary:\n• Total Messages: ${chatData.length}\n• Unique Users: ${users.size}\n• Replies: ${replies}\n• Edited Messages: ${edited}\n• Messages with Attachments: ${withAttachments}`;
+            }
+
+            return "I can help you analyze:\n• Most active users\n• Activity patterns\n• Mentions analysis\n• Reply chains\n• Attachment statistics\n• Edit frequency\n• General summary\n\nTry asking about any of these topics!";
+        }
+
+        function downloadPDF() {
+            if (!currentFileId || !uploadedFiles[currentFileId]) {
+                alert('No file selected');
+                return;
+            }
+
+            // Get the last assistant message (should be the summary)
+            const messages = chatMessages.querySelectorAll('.message.assistant');
+            if (messages.length === 0) {
+                alert('No summary available to download');
+                return;
+            }
+
+            const lastMessage = messages[messages.length - 1];
+            const content = lastMessage.querySelector('.message-content').textContent;
+            
+            // Remove the response time from the content
+            const cleanContent = content.replace(/⏱️ Response time: .*s\n\n/g, '');
+
+            // Create PDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Set font
+            doc.setFont('helvetica');
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.setTextColor(88, 101, 242);
+            doc.text('Discord Chat Analysis Report', 14, 20);
+            
+            // Add file info
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`File: ${uploadedFiles[currentFileId].name}`, 14, 30);
+            doc.text(`Date: ${new Date().toLocaleString()}`, 14, 36);
+            
+            // Split content into lines and add to PDF
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            
+            const lines = doc.splitTextToSize(cleanContent, 180);
+            let y = 45;
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (y > 280) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(lines[i], 14, y);
+                y += 6;
+            }
+            
+            // Save PDF
+            const fileName = `${uploadedFiles[currentFileId].name.replace('.json', '')}_Report.pdf`;
+            doc.save(fileName);
+        }
+    </script>
+</body>
+</html>
