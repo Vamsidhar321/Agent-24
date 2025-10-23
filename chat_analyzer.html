@@ -208,6 +208,7 @@
             flex-direction: column;
             background: white;
             height: 100%;
+            min-height: 0; /* Important for flex layout */
         }
 
         .chat-header {
@@ -231,27 +232,6 @@
             font-style: italic;
         }
 
-        .download-btn {
-            padding: 8px 16px;
-            background: #CC5B53;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.8em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: none;
-        }
-
-        .download-btn:hover {
-            background: #b84a42;
-        }
-
-        .download-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
 
         .chat-messages {
             flex: 1;
@@ -261,24 +241,32 @@
             border-radius: 8px;
             margin-bottom: 15px;
             border: 1px solid #CC5B53;
+            min-height: 0; /* Important for flex scrolling */
+            max-height: calc(100vh - 200px); /* Ensure it doesn't exceed viewport */
         }
 
         .chat-messages::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
 
         .chat-messages::-webkit-scrollbar-track {
             background: rgba(204, 91, 83, 0.1);
-            border-radius: 3px;
+            border-radius: 4px;
         }
 
         .chat-messages::-webkit-scrollbar-thumb {
             background: #CC5B53;
-            border-radius: 3px;
+            border-radius: 4px;
         }
 
         .chat-messages::-webkit-scrollbar-thumb:hover {
             background: #b84a42;
+        }
+
+        /* Ensure scrollbar is always visible when content overflows */
+        .chat-messages {
+            scrollbar-width: thin;
+            scrollbar-color: #CC5B53 rgba(204, 91, 83, 0.1);
         }
 
         .message {
@@ -327,6 +315,8 @@
         .chat-input-section {
             display: flex;
             gap: 10px;
+            flex-shrink: 0; /* Prevent input from shrinking */
+            margin-top: auto; /* Push to bottom */
         }
 
         .chat-input {
@@ -577,10 +567,7 @@
 
             <div class="chat-section">
                 <div class="chat-header">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <h2>💬 Chat</h2>
-                        <button class="download-btn" id="downloadBtn">📥 Download PDF</button>
-                    </div>
+                    <h2>💬 Chat</h2>
                     <div class="current-file" id="currentFile">No file selected</div>
                 </div>
 
@@ -613,7 +600,6 @@
         const sendBtn = document.getElementById('sendBtn');
         const chatMessages = document.getElementById('chatMessages');
         const currentFileDisplay = document.getElementById('currentFile');
-        const downloadBtn = document.getElementById('downloadBtn');
         const useLLM = document.getElementById('useLLM');
         const llmSettings = document.getElementById('llmSettings');
         const apiKeyInput = document.getElementById('apiKey');
@@ -624,8 +610,6 @@
             llmSettings.style.display = useLLM.checked ? 'block' : 'none';
         });
 
-        // Download PDF button
-        downloadBtn.addEventListener('click', downloadPDF);
 
         fileUpload.addEventListener('click', () => fileInput.click());
 
@@ -674,32 +658,35 @@
                         
                         renderFileList(); // Show loading state
                         
-                        // Simulate cleaning process with loading cursor
-                        setTimeout(() => {
-                            const cleanedData = cleanDiscordData(rawData);
-                            
-                            // Calculate date range
+                        // Process data immediately for faster performance
+                        const cleanedData = cleanDiscordData(rawData);
+                        
+                        // Calculate date range efficiently
+                        let dateRange = 'No data';
+                        if (cleanedData.length > 0) {
                             const timestamps = cleanedData.map(msg => msg.timestamp);
-                            const minDate = new Date(Math.min(...timestamps));
-                            const maxDate = new Date(Math.max(...timestamps));
-                            const dateRange = `${minDate.toLocaleDateString()} - ${maxDate.toLocaleDateString()}`;
-                            
-                            uploadedFiles[fileId] = {
-                                name: file.name,
-                                data: cleanedData,
-                                rawData: rawData,
-                                status: 'ready',
-                                messageCount: cleanedData.length,
-                                dateRange: dateRange
-                            };
-                            
-                            renderFileList(); // Update with final data
-                            
-                            // Auto-select first file
-                            if (!currentFileId && Object.keys(uploadedFiles).length === 1) {
-                                selectFile(fileId);
-                            }
-                        }, 500); // Small delay to show loading
+                            const minTimestamp = Math.min(...timestamps);
+                            const maxTimestamp = Math.max(...timestamps);
+                            const minDate = new Date(minTimestamp);
+                            const maxDate = new Date(maxTimestamp);
+                            dateRange = `${minDate.toLocaleDateString()} - ${maxDate.toLocaleDateString()}`;
+                        }
+                        
+                        uploadedFiles[fileId] = {
+                            name: file.name,
+                            data: cleanedData,
+                            rawData: rawData,
+                            status: 'ready',
+                            messageCount: cleanedData.length,
+                            dateRange: dateRange
+                        };
+                        
+                        renderFileList(); // Update with final data
+                        
+                        // Auto-select first file
+                        if (!currentFileId && Object.keys(uploadedFiles).length === 1) {
+                            selectFile(fileId);
+                        }
                         
                     } catch (error) {
                         alert(`Error parsing ${file.name}: ${error.message}`);
@@ -710,14 +697,20 @@
         }
 
         function cleanDiscordData(data) {
+            // Early return for empty or invalid data
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                return [];
+            }
+            
+            // Process data efficiently with optimized mapping
             return data.map(message => ({
                 authorId: message.authorId,
                 timestamp: message.createdTimestamp,
-                content: message.content,
+                content: message.content || '',
                 mentions: message.mentions?.users || [],
                 replyTo: message.reference?.messageId || null,
                 editedTimestamp: message.editedTimestamp || null,
-                type: message.type,
+                type: message.type || 0,
                 attachmentCount: message.attachments?.length || 0
             }));
         }
@@ -838,10 +831,10 @@
             // Calculate elapsed time
             const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
 
+            // Remove loading message
             chatMessages.removeChild(chatMessages.lastChild);
-            addMessage('assistant', `${answer}\n\n⏱️ Response time: ${elapsedTime}s`);
             
-            // Show download button if this is a summary response
+            // Check if this is a summary request for better handling
             const lowerQuestion = question.toLowerCase();
             const isAskingForSummary = lowerQuestion.includes('summary') || 
                                        lowerQuestion.includes('summarize') || 
@@ -849,7 +842,59 @@
                                        lowerQuestion.includes('summar');
             
             if (isAskingForSummary) {
-                downloadBtn.style.display = 'inline-block';
+                // For summary reports, show processing then download button
+                addMessage('assistant', 'Generating comprehensive report...', true);
+                
+                // Remove processing message immediately
+                chatMessages.removeChild(chatMessages.lastChild);
+                
+                // Create download message immediately for faster response
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message assistant';
+                
+                const header = document.createElement('div');
+                header.className = 'message-header assistant';
+                header.textContent = 'Agent 24';
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 1.2em; margin-bottom: 15px; color: #CC5B53;">📊 Report Generated Successfully!</div>
+                        <div style="margin-bottom: 20px;">Your Discord Analytics Report is ready for download.</div>
+                        <button onclick="downloadPDF()" style="
+                            background: linear-gradient(135deg, #CC5B53 0%, #b84a42 100%);
+                            color: white;
+                            border: none;
+                            padding: 15px 30px;
+                            border-radius: 8px;
+                            font-size: 1.1em;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            box-shadow: 0 4px 15px rgba(204, 91, 83, 0.3);
+                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(204, 91, 83, 0.4)'" 
+                           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(204, 91, 83, 0.3)'">
+                            📥 Download PDF Report
+                        </button>
+                        <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                            ⏱️ Generated in ${elapsedTime}s
+                        </div>
+                    </div>
+                `;
+                
+                messageDiv.appendChild(header);
+                messageDiv.appendChild(contentDiv);
+                chatMessages.appendChild(messageDiv);
+                
+                // Immediate scroll and focus for better responsiveness
+                requestAnimationFrame(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    chatInput.focus();
+                });
+            } else {
+                // For regular questions, add immediately
+                addMessage('assistant', `${answer}\n\n⏱️ Response time: ${elapsedTime}s`);
             }
             
             // Store in conversation history (ensure answer is a string)
@@ -885,41 +930,56 @@
                 
                 messages.push({
                     role: 'system',
-                    content: `You are a chat data analyst. You MUST produce a comprehensive report with ALL 6 sections below. Do not skip any section.
+                    content: `You are an AI data analyst specialized in community analytics. 
+You will analyze and summarize Discord chat data.
 
-YOUR REPORT MUST INCLUDE THESE 6 SECTIONS:
+When asked for a "summary" or "report", always format the answer 
+as a structured, professional Discord Analytics Report 
+with the following layout and tone — concise, analytical, 
+and formatted with clear Markdown headings and bullet points.
 
-1. **Overview**
-   - Total messages, total participants
-   - Most active times or dates
-   - Overall sentiment or tone of the chat (positive, neutral, negative)
+--- Report Format ---
+**Discord Chat Analysis Report**
 
-2. **Top Participants**
-   - List top 5–10 most active users
-   - Mention how many messages each sent and what topics they discussed most
+**1. Overview**
+Briefly describe the dataset (number of messages, channels, date range, etc.).
+Explain what this report represents.
 
-3. **Topics & Themes**
-   - Identify the main discussion topics or channels (e.g., gaming, art, off-topic)
-   - Summarize key subtopics or trends
-   - Mention any recurring jokes, debates, or events
+**2. Community Activity Summary**
+- Overall message activity
+- Most active channels
+- Most active users
+- Time-based activity trend (day/hour/week insights)
 
-4. **Behavioral Insights**
-   - Describe group dynamics (who leads conversations, who responds most)
-   - Detect emotional spikes, conflicts, or moments of high engagement
-   - Note any moderation or off-topic behavior
+**3. Key Discussion Themes**
+List 3–5 major topics discussed with a one-line insight for each.
 
-5. **Notable Quotes or Highlights**
-   - Include 3–5 short representative quotes or moments that summarize the chat's tone or key events
+**4. Sentiment Analysis**
+Summarize overall tone of conversation.
+Include positive vs negative sentiment ratio, notable emotions.
 
-6. **Summary Table**
-   - Format as a table showing: Channel/Topic | # Messages | Key Users | Mood | Notes
+**5. Engagement Insights**
+Highlight spikes in engagement and what triggered them.
+Mention any emerging community behaviors or moderation issues.
 
-CRITICAL: You MUST include all 6 sections. Format the output as a clean, human-readable markdown report.`
+**6. Notable Keywords / Mentions**
+List top recurring keywords, hashtags, or game titles.
+Summarize what they indicate about community focus.
+
+**7. Conclusion**
+Provide a short executive summary (3–5 sentences)
+describing the community health, sentiment, and opportunities for automation.
+
+Format all section titles in bold, use clear line breaks, and 
+avoid raw code or JSON. The report should look like a clean analytics summary.
+---
+
+Now, based on the user's uploaded chat data, generate the report following this exact structure.`
                 });
                 
                 messages.push({
                     role: 'user',
-                    content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nREQUIRED: Provide a comprehensive summary report with ALL 6 sections listed above. Do not skip any section.`
+                    content: `Here is the Discord chat data:\n\n${summary}\n\nUser question: ${question}\n\nREQUIRED: Generate a professional Discord Analytics Report following the exact 7-section format provided.`
                 });
             } else {
                 // Regular chat - simple RAG
@@ -1030,13 +1090,21 @@ ${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg
             if (isLoading) {
                 contentDiv.innerHTML = '<div class="loading"></div>';
             } else {
-                contentDiv.textContent = content;
+                // Use innerHTML for better performance with long content
+                // and to preserve markdown formatting
+                contentDiv.innerHTML = content.replace(/\n/g, '<br>');
             }
             
             messageDiv.appendChild(header);
             messageDiv.appendChild(contentDiv);
             chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Optimized scroll handling with immediate execution
+            requestAnimationFrame(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+            });
         }
 
         function analyzeChat(question) {
@@ -1119,18 +1187,28 @@ ${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg
                 return;
             }
 
-            // Get the last assistant message (should be the summary)
-            const messages = chatMessages.querySelectorAll('.message.assistant');
-            if (messages.length === 0) {
-                alert('No summary available to download');
+            // Get the stored report content from conversation history
+            if (!conversationHistory[currentFileId] || conversationHistory[currentFileId].length === 0) {
+                alert('No report available to download');
                 return;
             }
 
-            const lastMessage = messages[messages.length - 1];
-            const content = lastMessage.querySelector('.message-content').textContent;
+            // Find the last assistant message with the report content
+            const history = conversationHistory[currentFileId];
+            let reportContent = '';
             
-            // Remove the response time from the content
-            const cleanContent = content.replace(/⏱️ Response time: .*s\n\n/g, '');
+            // Look for the last assistant message that contains a report
+            for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i].role === 'assistant' && history[i].content.includes('**Discord Chat Analysis Report**')) {
+                    reportContent = history[i].content;
+                    break;
+                }
+            }
+
+            if (!reportContent) {
+                alert('No report content found. Please generate a summary first.');
+                return;
+            }
 
             // Create PDF
             const { jsPDF } = window.jspdf;
@@ -1154,7 +1232,7 @@ ${chatData.slice(0, 10).map((msg, i) => `${i + 1}. [User ${msg.authorId}]: ${msg
             doc.setFontSize(10);
             doc.setTextColor(0, 0, 0);
             
-            const lines = doc.splitTextToSize(cleanContent, 180);
+            const lines = doc.splitTextToSize(reportContent, 180);
             let y = 45;
             
             for (let i = 0; i < lines.length; i++) {
